@@ -1,0 +1,140 @@
+:root {
+  --paper: #eef0f2;
+  --ink: #1c2430;
+  --ink-quiet: #5a6472;
+  --rule: #c9ced5;
+  --ok: #2f7d4f;
+  --limited: #8a5a00;
+  --missing: #b3261e;
+  --clip-gap: 4px;
+
+  color-scheme: light dark;
+  font-family: 'Hiragino Sans', 'Noto Sans JP', 'Yu Gothic UI', 'Meiryo', sans-serif;
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--ink);
+  background: var(--paper);
+  -webkit-font-smoothing: antialiased;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #161a20;
+    --ink: #e6e9ed;
+    --ink-quiet: #9aa3ae;
+    --rule: #333a44;
+    --ok: #6cc28f;
+    --limited: #e0b057;
+    --missing: #f2847b;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+.page {
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 4rem 1.5rem 5rem;
+}
+
+.masthead h1 {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.lede {
+  margin: 0.5rem 0 2.5rem;
+  font-size: 1.125rem;
+}
+
+/* 対応状況をタイムラインのクリップ列として見せる */
+.track {
+  display: flex;
+  gap: var(--clip-gap);
+  height: 2.25rem;
+  margin: 0 0 1.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+.clip {
+  flex: 1;
+  border-radius: 4px;
+  background: var(--ok);
+}
+
+.clip.is-limited {
+  background: var(--limited);
+}
+
+.clip.is-missing {
+  background: repeating-linear-gradient(135deg, var(--missing) 0 6px, transparent 6px 12px);
+  outline: 2px solid var(--missing);
+  outline-offset: -2px;
+}
+
+.features {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--rule);
+}
+
+.feature {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.875rem 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.feature-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.feature-name {
+  font-weight: 600;
+}
+
+.feature-purpose {
+  color: var(--ink-quiet);
+  font-size: 0.875rem;
+}
+
+.feature-status {
+  flex-shrink: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ok);
+}
+
+.feature.is-limited .feature-status {
+  color: var(--limited);
+}
+
+.feature.is-missing .feature-status {
+  color: var(--missing);
+}
+
+.advice {
+  margin-top: 2rem;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
