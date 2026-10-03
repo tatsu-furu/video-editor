@@ -2,7 +2,7 @@
  * キーボードショートカット（設計書 11.3）。Mac では Ctrl を Cmd に読み替える。
  */
 import * as ops from '../core/project/ops'
-import { clipBoundaries, timelineToSource, totalDuration } from '../core/time/time'
+import { clipBoundaries, markerTimes, timelineToSource, totalDuration } from '../core/time/time'
 import { pause, seek, shuttle, stepFrames, togglePlay } from '../playback/controller'
 import { edit, redo, undo, useProject } from '../store/project'
 import { useSession } from '../store/session'
@@ -12,15 +12,17 @@ export const SHORTCUTS: [string, string][] = [
   ['J / K / L', '逆再生（倍速）／停止／再生（押すたびに倍速）'],
   ['← / →', '1フレーム移動'],
   ['Shift + ← / →', '1秒移動'],
-  ['↑ / ↓', '前／次のクリップ境界へ移動'],
+  ['↑ / ↓', '前／次のクリップ境界・ピンへ移動'],
   ['S または Ctrl+B', '再生ヘッドの位置で分割'],
   ['Q', '再生ヘッドより前を（そのクリップ内で）削除して詰める'],
   ['W', '再生ヘッドより後を（そのクリップ内で）削除して詰める'],
   ['I / O', '範囲の開始点／終了点を設定'],
-  ['Delete / Backspace', '選択中のクリップまたは I/O 範囲を削除して詰める'],
+  ['クリック（映像トラック）', 'クリップにチェックを付ける／外す'],
+  ['Delete / Backspace', 'チェックしたクリップ、または I/O 範囲を削除して詰める'],
+  ['M', '再生ヘッドの位置にピン（目印）を打つ'],
   ['N / Shift+N', '次／前の自動カット候補へ移動'],
   ['Enter', '選択中の候補を削除する（適用）'],
-  ['Backspace（候補を選択中）', '選択中の候補を残す（却下）'],
+  ['Backspace（候補を選択中・チェックなし）', '選択中の候補を残す（却下）'],
   ['Ctrl+Z / Ctrl+Shift+Z', '元に戻す／やり直す'],
   ['+ / −', 'タイムラインのズーム'],
   ['Shift + Z', 'タイムライン全体表示'],
@@ -70,6 +72,31 @@ function tlStart(assetId: string, a: number, b: number): number | null {
   return null
 }
 
+/**
+ * Delete キーと「削除して詰める」ボタン：チェックしたクリップ → I/O 範囲 → 選んだピン → 選んだ候補（残す）の順に処理する。
+ * 何もしなかったら false
+ */
+export function deleteSelection(): boolean {
+  const p = useProject.getState().project
+  const s = useSession.getState()
+  if (!p) return false
+  const checked = s.checkedClips.filter((id) => p.videoTrack.some((c) => c.id === id))
+  if (checked.length) {
+    edit(ops.deleteClips, checked)
+    useSession.setState({ checkedClips: [], selectedClip: null })
+  } else if (s.inPoint != null && s.outPoint != null && s.outPoint > s.inPoint) {
+    edit(ops.rippleDelete, s.inPoint, s.outPoint)
+    seek(s.inPoint)
+    useSession.setState({ inPoint: null, outPoint: null })
+  } else if (s.selectedMarker) {
+    edit(ops.removeMarker, s.selectedMarker)
+    useSession.setState({ selectedMarker: null })
+  } else if (s.selectedSuggestion) {
+    edit(ops.rejectSuggestions, [s.selectedSuggestion])
+  } else return false
+  return true
+}
+
 export function zoomBy(f: number): void {
   const s = useSession.getState()
   const cur = s.zoom ?? fitZoom()
@@ -107,7 +134,9 @@ export function handleKey(e: KeyboardEvent): void {
     if (e.shiftKey) seek(s.playhead + dir)
     else stepFrames(dir)
   } else if (key === 'ArrowUp' || key === 'ArrowDown') {
-    const b = clipBoundaries(p.videoTrack)
+    const b = [...clipBoundaries(p.videoTrack), ...markerTimes(p).map((m) => m.t)].sort(
+      (x, y) => x - y,
+    )
     const t = s.playhead
     const target =
       key === 'ArrowUp' ? [...b].reverse().find((x) => x < t - 1e-3) : b.find((x) => x > t + 1e-3)
@@ -126,16 +155,9 @@ export function handleKey(e: KeyboardEvent): void {
   } else if (key === 'i' || key === 'I') useSession.setState({ inPoint: s.playhead })
   else if (key === 'o' || key === 'O') useSession.setState({ outPoint: s.playhead })
   else if (key === 'Delete' || key === 'Backspace') {
-    if (s.selectedSuggestion) edit(ops.rejectSuggestions, [s.selectedSuggestion])
-    else if (s.inPoint != null && s.outPoint != null && s.outPoint > s.inPoint) {
-      edit(ops.rippleDelete, s.inPoint, s.outPoint)
-      seek(s.inPoint)
-      useSession.setState({ inPoint: null, outPoint: null })
-    } else if (s.selectedClip) {
-      edit(ops.deleteClip, s.selectedClip)
-      useSession.setState({ selectedClip: null })
-    } else handled = false
-  } else if (key === 'n' || key === 'N') gotoSuggestion(e.shiftKey ? -1 : 1)
+    if (!deleteSelection()) handled = false
+  } else if (key === 'm' || key === 'M') edit(ops.addMarker, s.playhead)
+  else if (key === 'n' || key === 'N') gotoSuggestion(e.shiftKey ? -1 : 1)
   else if (key === 'Enter') {
     if (s.selectedSuggestion) {
       const id = s.selectedSuggestion
@@ -151,6 +173,8 @@ export function handleKey(e: KeyboardEvent): void {
       helpOpen: false,
       selectedSuggestion: null,
       selectedClip: null,
+      checkedClips: [],
+      selectedMarker: null,
       inPoint: null,
       outPoint: null,
     })

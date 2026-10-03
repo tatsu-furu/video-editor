@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { createProject, isProject } from './create'
 import * as ops from './ops'
 import type { Asset, Project } from './types'
-import { totalDuration } from '../time/time'
+import { markerTimes, totalDuration } from '../time/time'
 import { clip } from '../time/time.test'
 
 const asset = (id: string, duration: number, kind: 'video' | 'audio' = 'video'): Asset => ({
@@ -141,5 +141,29 @@ describe('ops', () => {
     // 再生成は置き換え
     p = generateSubtitles(p, 'A', [{ sourceStart: 0, sourceEnd: 1, text: 'x' }])
     expect(p.subtitles).toHaveLength(1)
+  })
+})
+
+describe('ピンとまとめて削除', () => {
+  const deleteClips = ops.pure(ops.deleteClips)
+  const addMarker = ops.pure(ops.addMarker)
+  const removeMarker = ops.pure(ops.removeMarker)
+
+  it('チェックした複数のクリップを1回で削除して詰める', () => {
+    const p = deleteClips(base(), ['a', 'c'])
+    expect(p.videoTrack.map((c) => c.id)).toEqual(['b'])
+    expect(p.assets.A).toBeUndefined()
+  })
+
+  it('ピンはソース時刻で付き、カットしても同じ場面に残る', () => {
+    let p = addMarker(base(), 11, '見どころ')
+    expect(markerTimes(p)).toEqual([{ id: p.markers![0]!.id, t: 11, label: '見どころ' }])
+    // 前のクリップを消すと、ピンも一緒に前へ詰まる
+    p = deleteClips(p, ['a'])
+    expect(markerTimes(p)[0]!.t).toBe(1)
+    // ピンのある場面を消すと出なくなる
+    expect(markerTimes(deleteClips(p, ['b']))).toEqual([])
+    p = removeMarker(p, p.markers![0]!.id)
+    expect(p.markers).toEqual([])
   })
 })

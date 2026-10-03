@@ -10,6 +10,7 @@ import { saveNow, openProject } from '../store/project'
 import { resetSession, toast } from '../store/session'
 import { deleteProject, listProjects, saveProject } from '../storage/db'
 import { droppedFiles, pickFiles } from './panels/files'
+import { GuideButton } from './Guide'
 
 export function ProjectList() {
   const [list, setList] = useState<Project[] | null>(null)
@@ -31,6 +32,18 @@ export function ProjectList() {
       <p className="lede">
         動画はどこにもアップロードされません。すべての処理をこのブラウザの中で行います。
       </p>
+      <section className="intro">
+        <h2>はじめての方へ</h2>
+        <ol>
+          <li>下で「ゲーム録画」か「トーク動画」を選んで、動画を入れます。</li>
+          <li>自動で見つけた「いらなそうな所」を確認して、まとめて削除します。</li>
+          <li>必要なら字幕と BGM を入れて、MP4 で書き出します。</li>
+        </ol>
+        <GuideButton className="primary" />
+        <p className="muted small">
+          最新版の Google Chrome か Microsoft Edge（パソコン版）で使ってください。
+        </p>
+      </section>
 
       <section className="start">
         <h2>{ja.list.create}</h2>

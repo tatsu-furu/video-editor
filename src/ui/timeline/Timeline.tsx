@@ -8,11 +8,18 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import * as ops from '../../core/project/ops'
 import type { Sec } from '../../core/project/types'
-import { clipBoundaries, placeClips, timelineToSource, totalDuration } from '../../core/time/time'
+import {
+  clipBoundaries,
+  markerTimes,
+  placeClips,
+  timelineToSource,
+  totalDuration,
+} from '../../core/time/time'
 import { seek } from '../../playback/controller'
 import { cues as cuesOf, duckCurve } from '../../store/derived'
 import { beginGesture, edit, endGesture, previewGesture, useProject } from '../../store/project'
 import { useSession } from '../../store/session'
+import { deleteSelection } from '../shortcuts'
 import { ja } from '../../i18n/ja'
 import { LAYOUT, TOTAL_HEIGHT, drawTimeline, tOf, trackTop, xOf, type View } from './draw'
 
@@ -21,6 +28,7 @@ type Drag =
   | { kind: 'range'; from: Sec; moved: boolean; x0: number }
   | { kind: 'trim'; clipId: string; edge: 'in' | 'out'; x0: number; src0: number }
   | { kind: 'reorder'; clipId: string; x0: number; moved: boolean }
+  | { kind: 'marker' }
   | {
       kind: 'sub'
       subId: string
@@ -61,6 +69,8 @@ function cssColors(el: HTMLElement): Record<string, string> {
     'duck',
     'playhead',
     'text',
+    'checkFill',
+    'pin',
   ]
   return Object.fromEntries(names.map((n) => [n, get(n)]))
 }
@@ -124,6 +134,9 @@ export function Timeline() {
       inPoint: session.inPoint,
       outPoint: session.outPoint,
       selectedClip: session.selectedClip,
+      checkedClips: session.checkedClips,
+      markers: markerTimes(project),
+      selectedMarker: session.selectedMarker,
       selectedSubtitle: session.selectedSubtitle,
       selectedSuggestion: session.selectedSuggestion,
       dropAt,
@@ -136,6 +149,7 @@ export function Timeline() {
     (t: Sec, shift: boolean): Sec => {
       if (!project || shift || !useSession.getState().snap) return t
       const pts = [useSession.getState().playhead, ...clipBoundaries(project.videoTrack)]
+      for (const m of markerTimes(project)) pts.push(m.t)
       for (const c of cuesOf(project)) pts.push(c.start, c.end)
       let best = t
       let bestD = SNAP_PX / zoom
@@ -153,6 +167,9 @@ export function Timeline() {
 
   if (!project) return null
 
+  const checked = session.checkedClips.filter((id) => project.videoTrack.some((c) => c.id === id))
+  const hasRange = session.inPoint != null && session.outPoint != null
+
   const pos = (e: React.PointerEvent | React.MouseEvent) => {
     const r = canvasRef.current!.getBoundingClientRect()
     return { x: e.clientX - r.left, y: e.clientY - r.top }
@@ -169,6 +186,17 @@ export function Timeline() {
       return
     }
     if (y < LAYOUT.ruler) {
+      // ピンの旗をクリックしたらピンを選ぶ
+      const pin = markerTimes(project).find(
+        (m) => x >= xOf(view, m.t) - 4 && x <= xOf(view, m.t) + 12,
+      )
+      if (pin) {
+        useSession.setState({ selectedMarker: pin.id, selectedSuggestion: null })
+        seek(pin.t)
+        drag.current = { kind: 'marker' }
+        return
+      }
+      useSession.setState({ selectedMarker: null })
       drag.current = { kind: 'range', from: t, moved: false, x0: x }
       return
     }
@@ -215,6 +243,7 @@ export function Timeline() {
           selectedClip: hit.clip.id,
           selectedSuggestion: sug?.id ?? null,
           selectedSubtitle: null,
+          selectedMarker: null,
         })
         drag.current = { kind: 'reorder', clipId: hit.clip.id, x0: x, moved: false }
       }
@@ -332,6 +361,14 @@ export function Timeline() {
       if (idx > from) idx -= 1
       if (idx >= 0 && idx !== from) edit(ops.moveClip, d.clipId, idx)
       setDropAt(null)
+    } else if (d.kind === 'reorder' && !d.moved) {
+      // ドラッグせずにクリックしたら、チェックを付け外しする
+      const cur = useSession.getState().checkedClips
+      useSession.setState({
+        checkedClips: cur.includes(d.clipId)
+          ? cur.filter((c) => c !== d.clipId)
+          : [...cur, d.clipId],
+      })
     } else if (d.kind === 'sub') {
       const cur = useProject.getState().project!.subtitles.find((s) => s.id === d.subId)
       if (d.moved && cur)
@@ -346,6 +383,17 @@ export function Timeline() {
 
   const onDoubleClick = (e: React.MouseEvent) => {
     const { x, y } = pos(e)
+    if (y < LAYOUT.ruler) {
+      const pin = markerTimes(project).find(
+        (m) => x >= xOf(view, m.t) - 4 && x <= xOf(view, m.t) + 12,
+      )
+      const cur = pin && project.markers?.find((m) => m.id === pin.id)
+      if (cur) {
+        const label = prompt('ピンの名前（空でもよい）', cur.label)
+        if (label != null) edit(ops.renameMarker, cur.id, label.trim())
+      }
+      return
+    }
     if (!inTrack(y, trackTop.subs, LAYOUT.subs)) return
     const t = tOf(view, x)
     const cue = cuesOf(project).find((c) => t >= c.start && t <= c.end)
@@ -427,21 +475,50 @@ export function Timeline() {
         <button
           type="button"
           title="Delete"
-          disabled={
-            !(session.selectedClip || (session.inPoint != null && session.outPoint != null))
-          }
-          onClick={() => {
-            if (session.inPoint != null && session.outPoint != null) {
-              edit(ops.rippleDelete, session.inPoint, session.outPoint)
-              useSession.setState({ inPoint: null, outPoint: null })
-            } else if (session.selectedClip) {
-              edit(ops.deleteClip, session.selectedClip)
-              useSession.setState({ selectedClip: null })
-            }
-          }}
+          disabled={!(checked.length || hasRange)}
+          onClick={deleteSelection}
         >
-          {ja.timeline.remove}
+          {checked.length
+            ? `チェックした ${checked.length} 本を${ja.timeline.remove}`
+            : hasRange
+              ? `範囲を${ja.timeline.remove}`
+              : ja.timeline.remove}
         </button>
+        {checked.length > 0 && (
+          <button type="button" onClick={() => useSession.setState({ checkedClips: [] })}>
+            チェックを外す
+          </button>
+        )}
+        <span className="bar-sep" />
+        <button type="button" title="M" onClick={() => edit(ops.addMarker, session.playhead)}>
+          📍 ピンを打つ
+        </button>
+        {session.selectedMarker && (
+          <>
+            <button
+              type="button"
+              onClick={() => {
+                const cur = project.markers?.find((m) => m.id === session.selectedMarker)
+                const label = cur && prompt('ピンの名前（空でもよい）', cur.label)
+                if (cur && label != null) edit(ops.renameMarker, cur.id, label.trim())
+              }}
+            >
+              ピンの名前
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                edit(ops.removeMarker, session.selectedMarker!)
+                useSession.setState({ selectedMarker: null })
+              }}
+            >
+              ピンを消す
+            </button>
+          </>
+        )}
+        <span className="bar-hint muted">
+          {checked.length ? '' : 'クリップをクリックでチェック'}
+        </span>
       </div>
       <div className="timeline-canvas" ref={wrapRef}>
         <canvas

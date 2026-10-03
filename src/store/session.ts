@@ -43,6 +43,9 @@ export interface SessionState {
   playhead: Sec
   playing: boolean
   selectedClip: Id | null
+  /** クリックでチェックしたクリップ（まとめて削除する） */
+  checkedClips: Id[]
+  selectedMarker: Id | null
   selectedSubtitle: Id | null
   selectedSuggestion: Id | null
   inPoint: Sec | null
@@ -57,6 +60,7 @@ export interface SessionState {
   missing: Id[]
   toast: { text: string; kind: 'info' | 'error' } | null
   helpOpen: boolean
+  guideOpen: boolean
 }
 
 export const initialSession = (): SessionState => ({
@@ -71,6 +75,8 @@ export const initialSession = (): SessionState => ({
   playhead: 0,
   playing: false,
   selectedClip: null,
+  checkedClips: [],
+  selectedMarker: null,
   selectedSubtitle: null,
   selectedSuggestion: null,
   inPoint: null,
@@ -82,6 +88,7 @@ export const initialSession = (): SessionState => ({
   missing: [],
   toast: null,
   helpOpen: false,
+  guideOpen: false,
 })
 
 export const useSession = create<SessionState>(() => initialSession())

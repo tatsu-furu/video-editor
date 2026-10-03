@@ -108,6 +108,7 @@ export function pruneAssets(d: Draft<Project>) {
   for (const id of Object.keys(d.assets)) if (!used.has(id)) delete d.assets[id]
   d.subtitles = d.subtitles.filter((s) => used.has(s.assetId))
   d.suggestions = d.suggestions.filter((s) => used.has(s.assetId))
+  if (d.markers) d.markers = d.markers.filter((m) => used.has(m.assetId))
 }
 
 export const setAnalysisTrack: Recipe<[Id, number]> = (d, assetId, index) => {
@@ -156,6 +157,15 @@ export const rippleDelete: Recipe<[Sec, Sec]> = (d, t0, t1) => {
 
 export const deleteClip: Recipe<[Id]> = (d, clipId) => {
   d.videoTrack = d.videoTrack.filter((c) => c.id !== clipId)
+  pruneAssets(d)
+  fitBgm(d)
+  stamp(d)
+}
+
+/** 複数のクリップをまとめて削除して詰める（Undo 1回分） */
+export const deleteClips: Recipe<[readonly Id[]]> = (d, ids) => {
+  const set = new Set(ids)
+  d.videoTrack = d.videoTrack.filter((c) => !set.has(c.id))
   pruneAssets(d)
   fitBgm(d)
   stamp(d)
@@ -358,5 +368,27 @@ export const setAudioMix: Recipe<
 
 export const rename: Recipe<[string]> = (d, name) => {
   d.name = name.trim() || d.name
+  stamp(d)
+}
+
+/* ---------- ピン（目印） ---------- */
+
+/** タイムライン時刻 t にピンを打つ */
+export const addMarker: Recipe<[Sec, string?]> = (d, t, label = '') => {
+  const hit = timelineToSource(d, t)
+  if (!hit) return
+  d.markers ??= []
+  d.markers.push({ id: newId(), assetId: hit.assetId, sourceTime: hit.sourceTime, label })
+  stamp(d)
+}
+
+export const renameMarker: Recipe<[Id, string]> = (d, id, label) => {
+  const m = d.markers?.find((x) => x.id === id)
+  if (m) m.label = label.slice(0, 40)
+  stamp(d)
+}
+
+export const removeMarker: Recipe<[Id]> = (d, id) => {
+  if (d.markers) d.markers = d.markers.filter((m) => m.id !== id)
   stamp(d)
 }

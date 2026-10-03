@@ -4,6 +4,7 @@
 import * as ops from '../../core/project/ops'
 import { ja } from '../../i18n/ja'
 import { cancelJob } from '../../store/jobs'
+import { GuideButton, KOFI_URL } from '../Guide'
 import { edit, redo, saveNow, undo, useProject } from '../../store/project'
 import { resetSession, useSession, type Step } from '../../store/session'
 import { openProject } from '../../store/project'
@@ -58,6 +59,10 @@ export function Header() {
           <button type="button" onClick={redo} disabled={!canRedo} title="Ctrl+Shift+Z">
             ↷ {ja.redo}
           </button>
+          <GuideButton />
+          <a className="kofi-inline" href={KOFI_URL} target="_blank" rel="noopener noreferrer">
+            ☕ 支援
+          </a>
           <button type="button" onClick={() => useSession.setState({ helpOpen: true })} title="?">
             ? {ja.help}
           </button>

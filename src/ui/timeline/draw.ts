@@ -45,6 +45,9 @@ export interface DrawInput {
   inPoint: Sec | null
   outPoint: Sec | null
   selectedClip: Id | null
+  checkedClips: readonly Id[]
+  markers: readonly { id: Id; t: Sec; label: string }[]
+  selectedMarker: Id | null
   selectedSubtitle: Id | null
   selectedSuggestion: Id | null
   /** 並べ替え中の挿入位置（タイムライン時刻） */
@@ -205,9 +208,32 @@ export function drawTimeline(c: CanvasRenderingContext2D, v: View, d: DrawInput)
       }
     }
     c.restore()
-    c.strokeStyle = pc.clip.id === d.selectedClip ? C.accent! : C.clipEdge!
-    c.lineWidth = pc.clip.id === d.selectedClip ? 2 : 1
+    const checked = d.checkedClips.includes(pc.clip.id)
+    if (checked) {
+      c.fillStyle = C.checkFill!
+      c.fillRect(x, vt, w, vh)
+    }
+    c.strokeStyle = checked || pc.clip.id === d.selectedClip ? C.accent! : C.clipEdge!
+    c.lineWidth = checked ? 3 : pc.clip.id === d.selectedClip ? 2 : 1
     c.strokeRect(x + 0.5, vt + 0.5, w - 1, vh - 1)
+    // チェックボックス（クリックでチェック → まとめて削除）
+    if (w > 22) {
+      const bx = Math.max(x + 4, Math.min(LAYOUT.gutter + 4, x + w - 18))
+      c.fillStyle = checked ? C.accent! : C.bg!
+      c.fillRect(bx, vt + 4, 14, 14)
+      c.strokeStyle = checked ? C.accent! : C.clipEdge!
+      c.lineWidth = 1
+      c.strokeRect(bx + 0.5, vt + 4.5, 13, 13)
+      if (checked) {
+        c.strokeStyle = '#fff'
+        c.lineWidth = 2
+        c.beginPath()
+        c.moveTo(bx + 3, vt + 11)
+        c.lineTo(bx + 6, vt + 14)
+        c.lineTo(bx + 11, vt + 7)
+        c.stroke()
+      }
+    }
     if (pc.clip.muted) {
       c.fillStyle = C.muted!
       c.fillText('ミュート', x + 4, vt + 12)
@@ -274,6 +300,39 @@ export function drawTimeline(c: CanvasRenderingContext2D, v: View, d: DrawInput)
     const x = xOf(v, d.dropAt)
     c.fillStyle = C.accent!
     c.fillRect(x - 2, vt - 4, 4, vh + 8)
+  }
+
+  // ピン（目印）：目盛りに旗、全トラックに点線
+  for (const m of d.markers) {
+    if (m.t < t0 || m.t > t1) continue
+    const x = Math.round(xOf(v, m.t)) + 0.5
+    const sel = m.id === d.selectedMarker
+    c.strokeStyle = C.pin!
+    c.lineWidth = sel ? 2 : 1
+    c.setLineDash([4, 3])
+    c.beginPath()
+    c.moveTo(x, LAYOUT.ruler)
+    c.lineTo(x, TOTAL_HEIGHT)
+    c.stroke()
+    c.setLineDash([])
+    c.fillStyle = C.pin!
+    c.beginPath()
+    c.moveTo(x, 2)
+    c.lineTo(x + 10, 6)
+    c.lineTo(x, 10)
+    c.closePath()
+    c.fill()
+    c.fillRect(x - 1, 2, 2, LAYOUT.ruler - 2)
+    if (sel) {
+      c.strokeStyle = C.text!
+      c.lineWidth = 1
+      c.strokeRect(x - 3, 1, 15, LAYOUT.ruler - 2)
+    }
+    if (m.label) {
+      c.fillStyle = C.pin!
+      c.font = 'bold 11px system-ui, sans-serif'
+      c.fillText(m.label, x + 12, 12)
+    }
   }
 
   // 再生ヘッド

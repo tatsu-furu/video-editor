@@ -155,3 +155,15 @@ export function subtractRanges(from: readonly Range[], remove: readonly Range[])
 
 export const rangesLength = (rs: readonly Range[]): Sec =>
   rs.reduce((s, r) => s + (r.end - r.start), 0)
+
+/** ピンのタイムライン時刻（カットで消えたピンは出さない） */
+export function markerTimes(
+  project: Pick<Project, 'videoTrack' | 'markers'>,
+): { id: Id; t: Sec; label: string }[] {
+  const out: { id: Id; t: Sec; label: string }[] = []
+  for (const m of project.markers ?? []) {
+    const t = sourceToTimeline(project, m.assetId, m.sourceTime)
+    if (t != null) out.push({ id: m.id, t, label: m.label })
+  }
+  return out.sort((a, b) => a.t - b.t)
+}

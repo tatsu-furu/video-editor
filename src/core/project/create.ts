@@ -57,6 +57,7 @@ export function createProject(name = '無題のプロジェクト', now = new Da
     subtitleStyle: { ...DEFAULT_SUBTITLE_STYLE },
     audioMix: defaultAudioMix(),
     suggestions: [],
+    markers: [],
   }
 }
 

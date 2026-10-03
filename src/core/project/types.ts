@@ -34,6 +34,17 @@ export interface Project {
   audioMix: AudioMix
   /** 自動カット候補 */
   suggestions: Suggestion[]
+  /** タイムラインのピン（目印）。古い保存データには無い */
+  markers?: Marker[]
+}
+
+/** ピン。字幕と同じくソース時刻で持つので、カットしても同じ場面に付いたまま動く */
+export interface Marker {
+  id: Id
+  assetId: Id
+  sourceTime: Sec
+  /** 空でもよい */
+  label: string
 }
 
 export interface Asset {

@@ -647,6 +647,8 @@ fieldset.mode legend {
   --tl-duck: #4b2a8c;
   --tl-playhead: #d0312d;
   --tl-text: #1c2430;
+  --tl-checkFill: rgb(37 99 201 / 0.28);
+  --tl-pin: #d97706;
 }
 @media (prefers-color-scheme: dark) {
   .timeline-canvas canvas {
@@ -668,6 +670,8 @@ fieldset.mode legend {
     --tl-duck: #d7c6ff;
     --tl-playhead: #ff6b5e;
     --tl-text: #e6e9ed;
+    --tl-checkFill: rgb(91 143 240 / 0.3);
+    --tl-pin: #f5a623;
   }
 }
 .sub-editor {
@@ -713,4 +717,71 @@ fieldset.mode legend {
 }
 .keys tr + tr {
   border-top: 1px solid var(--rule);
+}
+
+/* ---------- 使い方・支援 ---------- */
+
+.intro {
+  margin-bottom: 2rem;
+  padding: 1rem 1.2rem;
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.intro h2 {
+  margin: 0 0 0.4rem;
+  font-size: 1.1rem;
+}
+.intro ol {
+  margin: 0 0 0.8rem;
+  padding-left: 1.4rem;
+}
+.guide h3 {
+  margin: 1rem 0 0.3rem;
+  font-size: 1rem;
+}
+.guide ul {
+  margin: 0;
+  padding-left: 1.3rem;
+  font-size: 0.92rem;
+}
+.guide .keys th {
+  white-space: normal;
+  min-width: 8rem;
+}
+.guide > button {
+  margin-top: 1rem;
+}
+.kofi {
+  position: fixed;
+  left: 1rem;
+  bottom: 1rem;
+  z-index: 30;
+  padding: 0.55rem 1rem;
+  border-radius: 999px;
+  background: #794bc4;
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.25);
+}
+.kofi:hover {
+  filter: brightness(1.1);
+}
+.kofi-inline {
+  align-self: center;
+  padding: 0.35rem 0.8rem;
+  border-radius: 6px;
+  background: #794bc4;
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+}
+.bar-sep {
+  width: 1px;
+  height: 1.2rem;
+  background: var(--rule);
+}
+.bar-hint {
+  font-size: 0.8rem;
 }
