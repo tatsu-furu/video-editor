@@ -2,19 +2,9 @@
 
 `main` ブランチに push すると、Netlify が自動でビルドして公開する。ビルド設定と COOP/COEP ヘッダーは `netlify.toml` に書いてあるので、Netlify の画面で設定する必要はない。
 
-## 1. GitHub にリポジトリを作る
+## 1. GitHub のリポジトリ
 
-```bash
-cd video-editor
-git init
-git add .
-git commit -m "P0: 基盤"
-git branch -M main
-git remote add origin https://github.com/<ユーザー名>/<リポジトリ名>.git
-git push -u origin main
-```
-
-公開リポジトリでも非公開リポジトリでもよい。
+このリポジトリ（`tatsu-furu/video-editor`）の直下がそのまま Vite のプロジェクトになっている。`main` に push すると Netlify が自動で公開する。
 
 ## 2. Netlify にサイトを作る
 
@@ -40,3 +30,6 @@ git push -u origin main
 
 - COEP を有効にしているため、CORS に対応していない外部の画像・フォント・埋め込みは読み込めない。外部素材は `public/` に置いて自前で配信する（設計書 3章）。
 - `netlify.toml` のヘッダーを変えたら、`vite.config.ts` の開発用ヘッダーも同じにする。
+- 外部への通信は、文字起こしと VAD のモデルの取得（Hugging Face）だけ。取得元は `src/config.ts` の `MODEL_HOST` で変えられる。
+- `.npmrc` で onnxruntime-node のバイナリのダウンロードを止めている（ブラウザでは使わないため。Netlify のビルドが速くなる）。
+- ビルド後の `dist/` は約 60MB（onnxruntime-web の WASM と、日本語フォントの分割ファイル）。Netlify の上限内に収まる。
