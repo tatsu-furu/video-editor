@@ -14,6 +14,18 @@ export function KofiButton() {
   )
 }
 
+/** 画面の下に小さく出す著作権表示。alt4l.dev へリンクする */
+export function SiteFooter() {
+  return (
+    <footer className="site-footer">
+      © 2026{' '}
+      <a href="https://alt4l.dev/" target="_blank" rel="noopener noreferrer">
+        aL / alt4L
+      </a>
+    </footer>
+  )
+}
+
 export function GuideButton({ className = '' }: { className?: string }) {
   return (
     <button

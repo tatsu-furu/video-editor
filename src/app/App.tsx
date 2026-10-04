@@ -6,7 +6,7 @@ import { useProject } from '../store/project'
 import { toast as showToast, useSession } from '../store/session'
 import { Editor } from '../ui/Editor'
 import { ProjectList } from '../ui/ProjectList'
-import { Guide, KofiButton } from '../ui/Guide'
+import { Guide, KofiButton, SiteFooter } from '../ui/Guide'
 import { checkFeatures, type FeatureEnv, type FeatureResult } from './featureCheck'
 
 export default function App() {
@@ -51,6 +51,7 @@ export default function App() {
       )}
       {showFeatures && <FeatureList results={report.results} />}
       {hasProject ? <Editor /> : <ProjectList />}
+      {!hasProject && <SiteFooter />}
       {!hasProject && <KofiButton />}
       <Guide />
       {toast && (
